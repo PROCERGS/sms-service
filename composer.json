@@ -1,0 +1,14 @@
+{
+    "name": "procergs/sms-service",
+    "description": "PROCERGS SMS Service",
+    "require": {
+        "ci/restclientbundle": "^2.0",
+        "ejsmont-artur/php-circuit-breaker": "^0.1.0"
+    },
+    "authors": [
+        {
+            "name": "Guilherme Donato",
+            "email": "guilhermednt@users.noreply.github.com"
+        }
+    ]
+}
