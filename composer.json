@@ -3,12 +3,21 @@
     "description": "PROCERGS SMS Service",
     "require": {
         "ci/restclientbundle": "^2.0",
-        "ejsmont-artur/php-circuit-breaker": "^0.1.0"
+        "ejsmont-artur/php-circuit-breaker": "^0.1.0",
+        "phpunit/phpunit": "^4.8",
+        "psr/log": "^1.0",
+        "symfony/http-foundation": "^3.1",
+        "symfony/http-kernel": "^3.1"
     },
     "authors": [
         {
             "name": "Guilherme Donato",
             "email": "guilhermednt@users.noreply.github.com"
         }
-    ]
+    ],
+    "autoload": {
+        "psr-4": {
+            "PROCERGS\\Sms\\": "src"
+        }
+    }
 }

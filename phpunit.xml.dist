@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- https://phpunit.de/manual/current/en/organizing-tests.html#organizing-tests.xml-configuration -->
+<phpunit
+    backupGlobals               = "false"
+    backupStaticAttributes      = "false"
+    colors                      = "true"
+    convertErrorsToExceptions   = "true"
+    convertNoticesToExceptions  = "true"
+    convertWarningsToExceptions = "true"
+    processIsolation            = "false"
+    stopOnFailure               = "false"
+    syntaxCheck                 = "false"
+    bootstrap                   = "vendor/autoload.php" >
+
+    <php>
+        <env name="DESTINATION_PHONE_COUNTRY_CODE" value="55" />
+        <env name="DESTINATION_PHONE_AREA_CODE" value="51" />
+        <env name="DESTINATION_PHONE_SUBSCRIBER_NUMBER" value="123456789" />
+
+        <env name="FROM_PHONE_COUNTRY_CODE" value="55" />
+        <env name="FROM_PHONE_SUBSCRIBER_NUMBER" value="123456789" />
+
+        <env name="SMS_TAG" value="tag" />
+
+        <env name="TPD_SYSTEM_ID" value="SYSTEM" />
+    </php>
+
+    <testsuites>
+        <testsuite name="Project Test Suite">
+            <directory>src/Tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist>
+            <directory>src</directory>
+            <exclude>
+                <directory>src/Tests</directory>
+            </exclude>
+        </whitelist>
+    </filter>
+
+</phpunit>
