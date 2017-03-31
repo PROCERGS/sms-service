@@ -3,7 +3,8 @@
 namespace PROCERGS\Sms\Tests;
 
 
-use PROCERGS\Sms\Model\PhoneNumber;
+use Circle\RestClientBundle\Services\RestClient;
+use libphonenumber\PhoneNumber;
 use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\SmsService;
 
@@ -11,43 +12,55 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
 {
     public function testSend()
     {
+        $smsService = $this->getSmsService();
+
         $to = new PhoneNumber();
         $to
             ->setCountryCode(getenv('DESTINATION_PHONE_COUNTRY_CODE'))
-            ->setAreaCode(getenv('DESTINATION_PHONE_AREA_CODE'))
-            ->setSubscriberNumber(getenv('DESTINATION_PHONE_SUBSCRIBER_NUMBER'));
+            ->setNationalNumber(getenv('DESTINATION_PHONE_AREA_CODE').getenv('DESTINATION_PHONE_SUBSCRIBER_NUMBER'));
 
-        $response = $this->sendSms($to, 'sms test');
+        $response = $this->sendSms($smsService, $to, 'sms test');
         $this->assertNotNull($response);
         $this->assertNotFalse($response);
-        $this->assertTrue(is_string($response));
     }
 
     public function testForceReceiveAll()
     {
-        $tag = getenv('SMS_TAG');
+        $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
+        $response->expects($this->once())->method('isOk')->willReturn(true);
+        $response->expects($this->once())->method('getContent')->willReturn(json_encode([['x' => 'oi']]));
+
+        $restClient = $this->getRestClient();
+        $restClient->expects($this->once())->method('get')->willReturn($response);
+
+        $tag = 'tag';
 
         /** @var SmsService $smsService */
-        $smsService = $this->container->get('sms.service');
+        $smsService = $this->getSmsService($restClient);
 
         $allSms = $smsService->forceReceive($tag);
         $this->assertNotEmpty($allSms);
-        $lastSms = end($allSms);
-
-        $smsQueue = $smsService->forceReceive($tag, $lastSms->id);
-        $this->assertEmpty($smsQueue);
     }
 
     public function testStatus()
     {
+        $transactionId = 123456;
+        $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
+        $response->expects($this->once())->method('isOk')->willReturn(true);
+        $response->expects($this->once())->method('getContent')->willReturn(
+            json_encode([['numero' => $transactionId]])
+        );
+
+        $restClient = $this->getRestClient();
+        $restClient->expects($this->once())->method('get')->willReturn($response);
+
         /** @var SmsService $smsService */
-        $smsService = $this->container->get('sms.service');
+        $smsService = $this->getSmsService($restClient);
 
         $to = new PhoneNumber();
         $to
-            ->setAreaCode(getenv('FROM_PHONE_COUNTRY_CODE'))
-            ->setSubscriberNumber(getenv('FROM_PHONE_SUBSCRIBER_NUMBER'));
-        $transactionId = $this->sendSms($to, 'testing status');
+            ->setCountryCode(getenv('DESTINATION_PHONE_COUNTRY_CODE'))
+            ->setNationalNumber(getenv('DESTINATION_PHONE_AREA_CODE').getenv('DESTINATION_PHONE_SUBSCRIBER_NUMBER'));
 
         $status = $smsService->getStatus($transactionId);
         $this->assertNotNull($status);
@@ -57,11 +70,50 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($transactionId, $first->numero);
     }
 
-    private function sendSms(PhoneNumber $to, $message)
+    private function getRestClient()
     {
-        /** @var SmsService $smsService */
-        $smsService = $this->container->get('sms.service');
+        $restClient = $this->getMockBuilder('Circle\RestClientBundle\Services\RestClient')
+            ->disableOriginalConstructor()
+            ->getMock();
 
+        $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
+        $response->expects($this->any())->method('isOk')->willReturn(true);
+        $response->expects($this->any())->method('getContent')->willReturn(
+            json_encode(
+                ['protocolo' => 12345678]
+            )
+        );
+
+        $restClient->expects($this->any())->method('post')->willReturn($response);
+
+        return $restClient;
+    }
+
+    /**
+     * @param RestClient|null $restClient
+     * @return SmsService
+     */
+    private function getSmsService($restClient = null)
+    {
+        if ($restClient === null) {
+            $restClient = $this->getRestClient();
+        }
+
+        $options = [
+            'send_url' => 'https://some.address/send',
+            'receive_url' => 'https://some.address/receive',
+            'status_url' => 'https://some.address/status',
+            'system_id' => 'SYSTEM',
+            'from_string' => 'SMS Service',
+            'service_order' => 1234,
+
+        ];
+
+        return new SmsService($restClient, $options);
+    }
+
+    private function sendSms(SmsService $smsService, PhoneNumber $to, $message)
+    {
         $sms = new Sms();
         $sms
             ->setFrom(getenv('TPD_SYSTEM_ID'))

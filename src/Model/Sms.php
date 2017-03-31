@@ -2,6 +2,7 @@
 
 namespace PROCERGS\Sms\Model;
 
+use libphonenumber\PhoneNumber;
 
 class Sms
 {

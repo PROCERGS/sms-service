@@ -12,8 +12,11 @@ namespace PROCERGS\Sms;
 
 use Circle\RestClientBundle\Exceptions\CurlException;
 use Circle\RestClientBundle\Services\RestClient;
-use Ejsmont\CircuitBreaker\Core\CircuitBreaker;
-use PROCERGS\Sms\Model\PhoneNumber;
+use libphonenumber\PhoneNumber;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
+use PROCERGS\Sms\Exception\InvalidCountryException;
+use PROCERGS\Sms\Exception\InvalidPhoneNumberException;
 use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Exception\SmsServiceException;
 use Psr\Log\LoggerAwareInterface;
@@ -24,15 +27,8 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 class SmsService implements LoggerAwareInterface
 {
 
-    const CB_SERVICE_SMS_SEND = 'services.sms.send';
-    const CB_SERVICE_SMS_RECEIVE = 'services.sms.receive';
-    const CB_SERVICE_SMS_STATUS = 'services.sms.status';
-
     /** @var RestClient */
     protected $restClient;
-
-    /** @var CircuitBreaker */
-    protected $circuitBreaker;
 
     /** @var string */
     protected $sendUrl;
@@ -61,13 +57,11 @@ class SmsService implements LoggerAwareInterface
     /**
      * SmsService constructor.
      * @param RestClient $restClient
-     * @param CircuitBreaker $circuitBreaker
      * @param array $options
      */
-    public function __construct(RestClient $restClient, CircuitBreaker $circuitBreaker, array $options = [])
+    public function __construct(RestClient $restClient, array $options = [])
     {
         $this->restClient = $restClient;
-        $this->circuitBreaker = $circuitBreaker;
 
         $this->sendUrl = $options['send_url'];
         $this->receiveUrl = $options['receive_url'];
@@ -95,11 +89,13 @@ class SmsService implements LoggerAwareInterface
      */
     public function send(Sms $sms)
     {
-        if (false === $this->circuitBreaker->isAvailable(SmsService::CB_SERVICE_SMS_SEND)) {
-            throw new ServiceUnavailableHttpException(null, '[Circuit Breaker] SMS sending service is unavailable');
-        }
-
         $client = $this->restClient;
+
+        if ($sms->getTo()->getCountryCode() != 55) {
+            throw new InvalidCountryException("SMS Service can only send messages to Brazil");
+        } else {
+            $to = $this->parseBrazilianPhone($sms->getTo());
+        }
 
         $payload = json_encode(
             [
@@ -107,30 +103,21 @@ class SmsService implements LoggerAwareInterface
                 'ordemServico' => $this->serviceOrder,
                 'remetente' => $sms->getFrom(),
                 'texto' => $sms->getMessage(),
-                'ddd' => $sms->getTo()->getAreaCode(),
-                'numero' => $sms->getTo()->getSubscriberNumber(),
+                'ddd' => $to['area_code'],
+                'numero' => $to['subscriber_number'],
             ]
         );
 
-        $this->logInfo("Sending SMS to {$sms->getTo()->toE164()}: {$sms->getMessage()}");
-        try {
-            $response = $client->post($this->sendUrl, $payload);
-            $json = json_decode($response->getContent());
-            if ($response->isOk() && property_exists($json, 'protocolo')) {
-                $this->logInfo("SMS sent to {$sms->getTo()->toE164()}: {$sms->getMessage()}");
-                $this->circuitBreaker->reportSuccess(self::CB_SERVICE_SMS_SEND);
+        $this->logInfo("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
+        $response = $client->post($this->sendUrl, $payload);
+        $json = json_decode($response->getContent());
+        if ($response->isOk() && property_exists($json, 'protocolo')) {
+            $this->logInfo("SMS sent to {$to['e164']}: {$sms->getMessage()}");
 
-                return $json->protocolo;
-            } else {
-                $this->logError("Error sending SMS to {$sms->getTo()->toE164()}");
-                $this->handleException($response, $json);
-            }
-        } catch (CurlException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_SEND);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
-        } catch (SmsServiceException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_SEND);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
+            return $json->protocolo;
+        } else {
+            $this->logError("Error sending SMS to {$to['e164']}");
+            $this->handleException($response, $json);
         }
     }
 
@@ -144,10 +131,6 @@ class SmsService implements LoggerAwareInterface
      */
     public function forceReceive($tag, $lastId = null)
     {
-        if (false === $this->circuitBreaker->isAvailable(SmsService::CB_SERVICE_SMS_RECEIVE)) {
-            throw new ServiceUnavailableHttpException(null, '[Circuit Breaker] SMS receiving service is unavailable');
-        }
-
         $client = $this->restClient;
 
         $params = compact('tag');
@@ -156,30 +139,20 @@ class SmsService implements LoggerAwareInterface
         }
 
         $this->logInfo("Fetching SMS for tag $tag...");
-        try {
-            $response = $client->get($this->receiveUrl."?".http_build_query($params));
-            $json = json_decode($response->getContent());
-            if ($response->isOk() && $json !== null && is_array($json)) {
-                usort(
-                    $json,
-                    function ($a, $b) {
-                        return $a->id - $b->id;
-                    }
-                );
-
-                $this->circuitBreaker->reportSuccess(self::CB_SERVICE_SMS_RECEIVE);
-
-                return $json;
-            } else {
-                $this->handleException($response, $json);
-            }
-        } catch (CurlException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_RECEIVE);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
-        } catch (SmsServiceException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_RECEIVE);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
+        $response = $client->get($this->receiveUrl."?".http_build_query($params));
+        $json = json_decode($response->getContent());
+        if ($response->isOk() && $json !== null && is_array($json)) {
+            usort(
+                $json,
+                function ($a, $b) {
+                    return $a->id - $b->id;
+                }
+            );
+        } else {
+            $this->handleException($response, $json);
         }
+
+        return $json;
     }
 
     /**
@@ -208,10 +181,6 @@ class SmsService implements LoggerAwareInterface
      */
     public function getStatus($transactionId)
     {
-        if (false === $this->circuitBreaker->isAvailable(SmsService::CB_SERVICE_SMS_STATUS)) {
-            throw new ServiceUnavailableHttpException(null, '[Circuit Breaker] SMS status service is unavailable');
-        }
-
         if (is_array($transactionId)) {
             $transactionIds = $transactionId;
         } else {
@@ -219,22 +188,12 @@ class SmsService implements LoggerAwareInterface
         }
 
         $client = $this->restClient;
-        try {
-            $response = $client->get($this->statusUrl.'?protocolos='.implode(',', $transactionIds));
-            $json = json_decode($response->getContent());
-            if ($response->isOk() && $json !== null && is_array($json)) {
-                $this->circuitBreaker->reportSuccess(self::CB_SERVICE_SMS_STATUS);
-
-                return $json;
-            } else {
-                $this->handleException($response, $json);
-            }
-        } catch (CurlException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_STATUS);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
-        } catch (SmsServiceException $e) {
-            $this->circuitBreaker->reportFailure(self::CB_SERVICE_SMS_STATUS);
-            throw new ServiceUnavailableHttpException(null, $e->getMessage(), $e);
+        $response = $client->get($this->statusUrl.'?protocolos='.implode(',', $transactionIds));
+        $json = json_decode($response->getContent());
+        if ($response->isOk() && $json !== null && is_array($json)) {
+            return $json;
+        } else {
+            $this->handleException($response, $json);
         }
     }
 
@@ -281,5 +240,22 @@ class SmsService implements LoggerAwareInterface
         }
 
         $this->logger->error($message, $context);
+    }
+
+    private function parseBrazilianPhone(PhoneNumber $phoneNumber)
+    {
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        $e164 = $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
+
+        $m = null;
+        if (false === preg_match_all('/^[+]55(\d{2})(\d+)$/', $e164, $m)) {
+            throw new InvalidPhoneNumberException("The provided phone number does not seem to be Brazilian.");
+        }
+
+        return [
+            'area_code' => $m[1],
+            'subscriber_number' => $m[2],
+            'e164' => $e164,
+        ];
     }
 }
