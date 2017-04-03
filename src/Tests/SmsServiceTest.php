@@ -196,9 +196,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
             $response->expects($this->any())->method('isOk')->willReturn(true);
             $response->expects($this->any())->method('getContent')->willReturn(
-                json_encode(
-                    ['protocolo' => 12345678]
-                )
+                json_encode(['protocolo' => 12345678])
             );
         }
 
