@@ -20,12 +20,15 @@ use PROCERGS\Sms\Exception\InvalidPhoneNumberException;
 use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Exception\SmsServiceException;
 use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class SmsService implements LoggerAwareInterface
 {
+    use LoggerAwareTrait, LoggerTrait;
 
     /** @var RestClient */
     protected $restClient;
@@ -108,16 +111,17 @@ class SmsService implements LoggerAwareInterface
             ]
         );
 
-        $this->logInfo("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
+        $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
         $response = $client->post($this->sendUrl, $payload);
         $json = json_decode($response->getContent());
         if ($response->isOk() && property_exists($json, 'protocolo')) {
-            $this->logInfo("SMS sent to {$to['e164']}: {$sms->getMessage()}");
+            $this->info("SMS sent to {$to['e164']}: {$sms->getMessage()}");
 
             return $json->protocolo;
         } else {
-            $this->logError("Error sending SMS to {$to['e164']}");
-            $this->handleException($response, $json);
+            $this->error("Error sending SMS to {$to['e164']}");
+
+            return $this->handleException($response, $json);
         }
     }
 
@@ -138,7 +142,7 @@ class SmsService implements LoggerAwareInterface
             $params['ultimoId'] = $lastId;
         }
 
-        $this->logInfo("Fetching SMS for tag $tag...");
+        $this->info("Fetching SMS for tag $tag...");
         $response = $client->get($this->receiveUrl."?".http_build_query($params));
         $json = json_decode($response->getContent());
         if ($response->isOk() && $json !== null && is_array($json)) {
@@ -213,42 +217,13 @@ class SmsService implements LoggerAwareInterface
         return $this->send($sms);
     }
 
-    /**
-     * Sets a logger instance on the object
-     *
-     * @param LoggerInterface $logger
-     * @return null
-     */
-    public function setLogger(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
-
-    private function logInfo($message, $context = [])
-    {
-        if ($this->logger === null) {
-            return;
-        }
-
-        $this->logger->info($message, $context);
-    }
-
-    private function logError($message, $context = [])
-    {
-        if ($this->logger === null) {
-            return;
-        }
-
-        $this->logger->error($message, $context);
-    }
-
     private function parseBrazilianPhone(PhoneNumber $phoneNumber)
     {
         $phoneUtil = PhoneNumberUtil::getInstance();
         $e164 = $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
 
         $m = null;
-        if (false === preg_match_all('/^[+]55(\d{2})(\d+)$/', $e164, $m)) {
+        if (preg_match_all('/^[+]55(\d{2})(\d+)$/', $e164, $m) <= 0) {
             throw new InvalidPhoneNumberException("The provided phone number does not seem to be Brazilian.");
         }
 
@@ -257,5 +232,21 @@ class SmsService implements LoggerAwareInterface
             'subscriber_number' => $m[2],
             'e164' => $e164,
         ];
+    }
+
+    /**
+     * Logs with an arbitrary level.
+     *
+     * @param mixed $level
+     * @param string $message
+     * @param array $context
+     *
+     * @return void
+     */
+    protected function log($level, $message, array $context = array())
+    {
+        if ($this->logger) {
+            $this->logger->log($level, $message, $context);
+        }
     }
 }
