@@ -112,7 +112,7 @@ class SmsService implements LoggerAwareInterface
         );
 
         $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
-        $response = $client->post($this->sendUrl, $payload);
+        $response = $client->post($this->sendUrl, $payload, $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && property_exists($json, 'protocolo')) {
             $this->info("SMS sent to {$to['e164']}: {$sms->getMessage()}");
@@ -143,7 +143,7 @@ class SmsService implements LoggerAwareInterface
         }
 
         $this->info("Fetching SMS for tag $tag...");
-        $response = $client->get($this->receiveUrl."?".http_build_query($params));
+        $response = $client->get($this->receiveUrl."?".http_build_query($params), $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && $json !== null && is_array($json)) {
             usort(
@@ -153,7 +153,7 @@ class SmsService implements LoggerAwareInterface
                 }
             );
         } else {
-            $this->handleException($response, $json);
+            return $this->handleException($response, $json);
         }
 
         return $json;
@@ -185,19 +185,15 @@ class SmsService implements LoggerAwareInterface
      */
     public function getStatus($transactionId)
     {
-        if (is_array($transactionId)) {
-            $transactionIds = $transactionId;
-        } else {
-            $transactionIds = [$transactionId];
-        }
+        $transactionIds = is_array($transactionId) ? $transactionId : [$transactionId];
 
         $client = $this->restClient;
-        $response = $client->get($this->statusUrl.'?protocolos='.implode(',', $transactionIds));
+        $response = $client->get($this->statusUrl.'?protocolos='.implode(',', $transactionIds), $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && $json !== null && is_array($json)) {
             return $json;
         } else {
-            $this->handleException($response, $json);
+            return $this->handleException($response, $json);
         }
     }
 
@@ -223,7 +219,7 @@ class SmsService implements LoggerAwareInterface
         $e164 = $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
 
         $m = null;
-        if (preg_match_all('/^[+]55(\d{2})(\d+)$/', $e164, $m) <= 0) {
+        if (preg_match('/^[+]55(\d{2})(\d+)$/', $e164, $m) <= 0) {
             throw new InvalidPhoneNumberException("The provided phone number does not seem to be Brazilian.");
         }
 
@@ -248,5 +244,16 @@ class SmsService implements LoggerAwareInterface
         if ($this->logger) {
             $this->logger->log($level, $message, $context);
         }
+    }
+
+    private function getHeaders()
+    {
+        return [
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/json",
+                "sistema: ".$this->systemId,
+                "chave: ".$this->systemKey,
+            ],
+        ];
     }
 }
