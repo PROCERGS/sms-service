@@ -13,19 +13,6 @@
     syntaxCheck                 = "false"
     bootstrap                   = "vendor/autoload.php" >
 
-    <php>
-        <env name="DESTINATION_PHONE_COUNTRY_CODE" value="55" />
-        <env name="DESTINATION_PHONE_AREA_CODE" value="51" />
-        <env name="DESTINATION_PHONE_SUBSCRIBER_NUMBER" value="123456789" />
-
-        <env name="FROM_PHONE_COUNTRY_CODE" value="55" />
-        <env name="FROM_PHONE_SUBSCRIBER_NUMBER" value="123456789" />
-
-        <env name="SMS_TAG" value="tag" />
-
-        <env name="TPD_SYSTEM_ID" value="SYSTEM" />
-    </php>
-
     <testsuites>
         <testsuite name="Project Test Suite">
             <directory>src/Tests</directory>

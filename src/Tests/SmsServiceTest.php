@@ -145,8 +145,8 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
 
         $to = new PhoneNumber();
         $to
-            ->setCountryCode(getenv('DESTINATION_PHONE_COUNTRY_CODE'))
-            ->setNationalNumber(getenv('DESTINATION_PHONE_AREA_CODE').getenv('DESTINATION_PHONE_SUBSCRIBER_NUMBER'));
+            ->setCountryCode('55')
+            ->setNationalNumber('55999999999');
 
         $status = $smsService->getStatus($transactionId);
         $this->assertNotNull($status);
@@ -244,8 +244,8 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
     {
         $phoneNumber = new PhoneNumber();
         $phoneNumber
-            ->setCountryCode(getenv('DESTINATION_PHONE_COUNTRY_CODE'))
-            ->setNationalNumber(getenv('DESTINATION_PHONE_AREA_CODE').getenv('DESTINATION_PHONE_SUBSCRIBER_NUMBER'));
+            ->setCountryCode('55')
+            ->setNationalNumber('55999999999');
 
         return $phoneNumber;
     }
