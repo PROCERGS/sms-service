@@ -50,7 +50,7 @@ require_once 'vendor/autoload.php';
 use libphonenumber\PhoneNumber;
 use PROCERGS\Sms\SmsService;
 
-/* initialize or get HTTP client from Symfony */
+$client = /* initialize or get HTTP client from Symfony */;
 
 $options = [
     'send_url' => "https://some.address/send",
