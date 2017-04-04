@@ -5,6 +5,7 @@ namespace PROCERGS\Sms\Tests;
 
 use Circle\RestClientBundle\Services\RestClient;
 use libphonenumber\PhoneNumber;
+use PROCERGS\Sms\Model\SmsServiceConfiguration;
 use PROCERGS\Sms\SmsService;
 
 class SmsServiceTest extends \PHPUnit_Framework_TestCase
@@ -216,20 +217,17 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             $restClient = $this->getRestClient();
         }
 
-        $options = [
-            'send_url' => 'https://some.address/send',
-            'receive_url' => 'https://some.address/receive',
-            'status_url' => 'https://some.address/status',
-            'system_id' => 'SYSTEM',
-            'from_string' => 'SMS Service',
-            'service_order' => 1234,
-            'authentication' => [
-                'system_id' => 'SOME_ID',
-                'system_key' => 'SECRET_KEY',
-            ],
-        ];
+        $config = new SmsServiceConfiguration(
+            'https://some.address/send',
+            'https://some.address/receive',
+            'https://some.address/status',
+            'SYSTEM',
+            'SECRET_KEY',
+            1234,
+            'SMS Service'
+        );
 
-        $service = new SmsService($restClient, $options);
+        $service = new SmsService($restClient, $config);
         $service->setLogger($logger);
 
         return $service;

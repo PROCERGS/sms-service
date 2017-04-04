@@ -19,6 +19,7 @@ use PROCERGS\Sms\Exception\InvalidCountryException;
 use PROCERGS\Sms\Exception\InvalidPhoneNumberException;
 use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Exception\SmsServiceException;
+use PROCERGS\Sms\Model\SmsServiceConfiguration;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -33,55 +34,18 @@ class SmsService implements LoggerAwareInterface
     /** @var RestClient */
     protected $restClient;
 
-    /** @var string */
-    protected $sendUrl;
-
-    /** @var string */
-    protected $receiveUrl;
-
-    /** @var string */
-    protected $statusUrl;
-
-    /** @var string */
-    protected $serviceOrder;
-
-    /** @var string */
-    protected $systemId;
-
-    /** @var string */
-    protected $fromString;
-
-    /** @var string */
-    protected $systemKey;
-
-    /** @var LoggerInterface */
-    protected $logger;
+    /** @var SmsServiceConfiguration */
+    protected $config;
 
     /**
      * SmsService constructor.
      * @param RestClient $restClient
      * @param array $options
      */
-    public function __construct(RestClient $restClient, array $options = [])
+    public function __construct(RestClient $restClient, SmsServiceConfiguration $config)
     {
         $this->restClient = $restClient;
-
-        $this->sendUrl = $options['send_url'];
-        $this->receiveUrl = $options['receive_url'];
-        $this->statusUrl = $options['status_url'];
-        $this->systemId = $options['system_id'];
-        $this->fromString = $options['from_string'];
-        $this->serviceOrder = $options['service_order'];
-
-        if (array_key_exists('authentication', $options)) {
-            $auth = $options['authentication'];
-            if (array_key_exists('system_id', $auth)) {
-                $this->systemId = $auth['system_id'];
-            }
-            if (array_key_exists('system_key', $auth)) {
-                $this->systemKey = $auth['system_key'];
-            }
-        }
+        $this->config = $config;
     }
 
     /**
@@ -102,8 +66,8 @@ class SmsService implements LoggerAwareInterface
 
         $payload = json_encode(
             [
-                'aplicacao' => $this->systemId,
-                'ordemServico' => $this->serviceOrder,
+                'aplicacao' => $this->config->getSystemId(),
+                'ordemServico' => $this->config->getServiceOrder(),
                 'remetente' => $sms->getFrom(),
                 'texto' => $sms->getMessage(),
                 'ddd' => $to['area_code'],
@@ -112,7 +76,7 @@ class SmsService implements LoggerAwareInterface
         );
 
         $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
-        $response = $client->post($this->sendUrl, $payload, $this->getHeaders());
+        $response = $client->post($this->config->getSendUri(), $payload, $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && property_exists($json, 'protocolo')) {
             $this->info("SMS sent to {$to['e164']}: {$sms->getMessage()}");
@@ -143,7 +107,7 @@ class SmsService implements LoggerAwareInterface
         }
 
         $this->info("Fetching SMS for tag $tag...");
-        $response = $client->get($this->receiveUrl."?".http_build_query($params), $this->getHeaders());
+        $response = $client->get($this->config->getReceiveUri()."?".http_build_query($params), $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && $json !== null && is_array($json)) {
             usort(
@@ -188,7 +152,10 @@ class SmsService implements LoggerAwareInterface
         $transactionIds = is_array($transactionId) ? $transactionId : [$transactionId];
 
         $client = $this->restClient;
-        $response = $client->get($this->statusUrl.'?protocolos='.implode(',', $transactionIds), $this->getHeaders());
+        $response = $client->get(
+            $this->config->getStatusUri().'?protocolos='.implode(',', $transactionIds),
+            $this->getHeaders()
+        );
         $json = json_decode($response->getContent());
         if ($response->isOk() && $json !== null && is_array($json)) {
             return $json;
@@ -206,7 +173,7 @@ class SmsService implements LoggerAwareInterface
     {
         $sms = new Sms();
         $sms
-            ->setFrom($this->fromString)
+            ->setFrom($this->config->getFrom())
             ->setTo($to)
             ->setMessage($message);
 
@@ -251,8 +218,8 @@ class SmsService implements LoggerAwareInterface
         return [
             CURLOPT_HTTPHEADER => [
                 "Content-Type: application/json",
-                "sistema: ".$this->systemId,
-                "chave: ".$this->systemKey,
+                "sistema: ".$this->config->getSystemId(),
+                "chave: ".$this->config->getSystemKey(),
             ],
         ];
     }
