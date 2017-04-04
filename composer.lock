@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "11eef62193d71027ca2d1321f352bede",
-    "content-hash": "73009bde1bd9db44ba42f701b278f2d3",
+    "hash": "8e2352f4c8935698fb6b339fc5771fa4",
+    "content-hash": "6ad5fbded8e384eba899a73ef2ba697b",
     "packages": [
         {
             "name": "ci/restclientbundle",
