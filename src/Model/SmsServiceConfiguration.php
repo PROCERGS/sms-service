@@ -56,6 +56,16 @@ class SmsServiceConfiguration
     private $from;
 
     /**
+     * This will define the "send" parameter of the request.
+     *
+     * When false, messages will be sent to the SMS Service but will not be actually sent as SMS.
+     * This is useful for testing the API without sending the messages.
+     *
+     * @var boolean
+     */
+    private $shouldSend;
+
+    /**
      * SmsServiceConfiguration constructor.
      * @param string $sendUri
      * @param string $receiveUri
@@ -64,9 +74,18 @@ class SmsServiceConfiguration
      * @param string $systemKey
      * @param int $serviceOrder
      * @param string $from
+     * @param $shouldSend
      */
-    public function __construct($sendUri, $receiveUri, $statusUri, $systemId, $systemKey, $serviceOrder, $from)
-    {
+    public function __construct(
+        $sendUri,
+        $receiveUri,
+        $statusUri,
+        $systemId,
+        $systemKey,
+        $serviceOrder,
+        $from,
+        $shouldSend
+    ) {
         $this->sendUri = $sendUri;
         $this->receiveUri = $receiveUri;
         $this->statusUri = $statusUri;
@@ -74,6 +93,7 @@ class SmsServiceConfiguration
         $this->systemKey = $systemKey;
         $this->serviceOrder = $serviceOrder;
         $this->from = $from;
+        $this->shouldSend = $shouldSend;
     }
 
     /**
@@ -130,5 +150,13 @@ class SmsServiceConfiguration
     public function getFrom()
     {
         return $this->from;
+    }
+
+    /**
+     * @return bool
+     */
+    public function shouldSend()
+    {
+        return $this->shouldSend;
     }
 }

@@ -224,7 +224,8 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             'SYSTEM',
             'SECRET_KEY',
             1234,
-            'SMS Service'
+            'SMS Service',
+            false
         );
 
         $service = new SmsService($restClient, $config);

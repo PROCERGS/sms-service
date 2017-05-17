@@ -22,7 +22,6 @@ use PROCERGS\Sms\Exception\SmsServiceException;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -40,7 +39,7 @@ class SmsService implements LoggerAwareInterface
     /**
      * SmsService constructor.
      * @param RestClient $restClient
-     * @param array $options
+     * @param SmsServiceConfiguration $config
      */
     public function __construct(RestClient $restClient, SmsServiceConfiguration $config)
     {
@@ -72,6 +71,7 @@ class SmsService implements LoggerAwareInterface
                 'texto' => $sms->getMessage(),
                 'ddd' => $to['area_code'],
                 'numero' => $to['subscriber_number'],
+                'send' => $this->config->shouldSend(),
             ]
         );
 
