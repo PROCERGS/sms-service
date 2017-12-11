@@ -34,4 +34,4 @@ jobs:
           key: v1-dependencies-{{ checksum "composer.json" }}
 
       # run tests!
-      - run: phpunit --coverage-html=$CIRCLE_ARTIFACTS/coverage
+      - run: vendor/bin/phpunit --coverage-html=$CIRCLE_ARTIFACTS/coverage
