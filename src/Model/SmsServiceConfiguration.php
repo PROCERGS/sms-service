@@ -27,6 +27,13 @@ class SmsServiceConfiguration
     private $statusUri;
 
     /**
+     * Realm for authenticating with the SMS Service
+     *
+     * @var string
+     */
+    private $realm;
+
+    /**
      * System Id for authenticating with the SMS Service
      *
      * @var string
@@ -70,6 +77,7 @@ class SmsServiceConfiguration
      * @param string $sendUri
      * @param string $receiveUri
      * @param string $statusUri
+     * @param string $realm
      * @param string $systemId
      * @param string $systemKey
      * @param int $serviceOrder
@@ -80,6 +88,7 @@ class SmsServiceConfiguration
         $sendUri,
         $receiveUri,
         $statusUri,
+        $realm,
         $systemId,
         $systemKey,
         $serviceOrder,
@@ -89,6 +98,7 @@ class SmsServiceConfiguration
         $this->sendUri = $sendUri;
         $this->receiveUri = $receiveUri;
         $this->statusUri = $statusUri;
+        $this->realm = $realm;
         $this->systemId = $systemId;
         $this->systemKey = $systemKey;
         $this->serviceOrder = $serviceOrder;
@@ -118,6 +128,14 @@ class SmsServiceConfiguration
     public function getStatusUri()
     {
         return $this->statusUri;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRealm()
+    {
+        return $this->realm;
     }
 
     /**
