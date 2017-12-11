@@ -52,6 +52,7 @@ class SmsService implements LoggerAwareInterface
      * @param Sms $sms
      * @return string transaction id for later checking
      * @throws ServiceUnavailableHttpException
+     * @throws SmsServiceException
      */
     public function send(Sms $sms)
     {
@@ -63,25 +64,19 @@ class SmsService implements LoggerAwareInterface
             $to = $this->parseBrazilianPhone($sms->getTo());
         }
 
-        $payload = json_encode(
-            [
-                'aplicacao' => $this->config->getSystemId(),
-                'ordemServico' => $this->config->getServiceOrder(),
-                'remetente' => $sms->getFrom(),
-                'texto' => $sms->getMessage(),
-                'ddd' => $to['area_code'],
-                'numero' => $to['subscriber_number'],
-                'send' => $this->config->shouldSend(),
-            ]
-        );
+        $payload = [
+            'to' => $sms->getTo()->getNationalNumber(),
+            'text' => $sms->getMessage(),
+            'send' => $this->config->shouldSend(),
+        ];
 
         $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
-        $response = $client->post($this->config->getSendUri(), $payload, $this->getHeaders());
+        $response = $client->post($this->config->getSendUri(), json_encode($payload), $this->getHeaders());
         $json = json_decode($response->getContent());
-        if ($response->isOk() && property_exists($json, 'protocolo')) {
+        if ($response->isOk() && is_numeric($json)) {
             $this->info("SMS sent to {$to['e164']}: {$sms->getMessage()}");
 
-            return $json->protocolo;
+            return $json;
         } else {
             $this->error("Error sending SMS to {$to['e164']}");
 
@@ -91,10 +86,9 @@ class SmsService implements LoggerAwareInterface
 
     /**
      * Force fetch pending SMS messages
-     * @param $tag string "tag" to be fetched
+     * @param string $tag "tag" to be fetched
      * @param integer $lastId
      * @return array
-     * @throws CurlException
      * @throws SmsServiceException
      */
     public function forceReceive($tag, $lastId = null)
@@ -103,7 +97,7 @@ class SmsService implements LoggerAwareInterface
 
         $params = compact('tag');
         if ($lastId !== null) {
-            $params['ultimoId'] = $lastId;
+            $params['firstid'] = $lastId;
         }
 
         $this->info("Fetching SMS for tag $tag...");
@@ -142,22 +136,18 @@ class SmsService implements LoggerAwareInterface
 
     /**
      * Checks the status of sent messages
-     * @param $transactionId mixed
-     * @return array
-     * @throws CurlException
+     * @param int $transactionId
+     * @return array|object
      * @throws SmsServiceException
      */
     public function getStatus($transactionId)
     {
-        $transactionIds = is_array($transactionId) ? $transactionId : [$transactionId];
+        $url = str_replace('{id}', $transactionId, $this->config->getStatusUri());
 
         $client = $this->restClient;
-        $response = $client->get(
-            $this->config->getStatusUri().'?protocolos='.implode(',', $transactionIds),
-            $this->getHeaders()
-        );
+        $response = $client->get($url, $this->getHeaders());
         $json = json_decode($response->getContent());
-        if ($response->isOk() && $json !== null && is_array($json)) {
+        if ($response->isOk() && $json !== null) {
             return $json;
         } else {
             return $this->handleException($response, $json);
@@ -168,6 +158,7 @@ class SmsService implements LoggerAwareInterface
      * @param PhoneNumber $to
      * @param string $message
      * @return string
+     * @throws SmsServiceException
      */
     public function easySend(PhoneNumber $to, $message)
     {
@@ -218,8 +209,9 @@ class SmsService implements LoggerAwareInterface
         return [
             CURLOPT_HTTPHEADER => [
                 "Content-Type: application/json",
-                "sistema: ".$this->config->getSystemId(),
-                "chave: ".$this->config->getSystemKey(),
+                "organizacao: ".$this->config->getRealm(),
+                "matricula: ".$this->config->getSystemId(),
+                "senha: ".$this->config->getSystemKey(),
             ],
         ];
     }

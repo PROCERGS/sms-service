@@ -14,16 +14,22 @@ class SmsTest extends \PHPUnit_Framework_TestCase
         $from = 'FROM';
         $message = 'SOME MESSAGE';
         $createdAt = new \DateTime();
+        $deliveryStartDate = new \DateTime();
+        $deliveryEndDate = new \DateTime();
 
         $sms = new Sms();
         $sms->setCreatedAt($createdAt);
         $sms->setFrom($from);
         $sms->setMessage($message);
         $sms->setTo($phoneNumber);
+        $sms->setDontDeliverUntil($deliveryStartDate);
+        $sms->setDontDeliverAfter($deliveryEndDate);
 
-        $this->assertEquals($createdAt, $sms->getCreatedAt());
+        $this->assertSame($createdAt, $sms->getCreatedAt());
         $this->assertEquals($from, $sms->getFrom());
         $this->assertEquals($message, $sms->getMessage());
         $this->assertEquals($phoneNumber, $sms->getTo());
+        $this->assertSame($deliveryStartDate, $sms->getDontDeliverUntil());
+        $this->assertSame($deliveryEndDate, $sms->getDontDeliverAfter());
     }
 }

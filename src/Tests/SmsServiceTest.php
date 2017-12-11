@@ -2,23 +2,44 @@
 
 namespace PROCERGS\Sms\Tests;
 
-
 use Circle\RestClientBundle\Services\RestClient;
 use libphonenumber\PhoneNumber;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
 use PROCERGS\Sms\SmsService;
+use Symfony\Component\HttpFoundation\Response;
 
 class SmsServiceTest extends \PHPUnit_Framework_TestCase
 {
     public function testSend()
     {
-        $smsService = $this->getSmsService();
+        $id = 12345678;
+        $httpResponse = $this->getResponse();
+        $httpResponse->expects($this->any())->method('isOk')->willReturn(true);
+        $httpResponse->expects($this->any())->method('getContent')->willReturn(
+            json_encode($id)
+        );
+
+        $restClient = $this->getRestClient();
+        $restClient->expects($this->once())->method('post')
+            ->with(
+                $this->isType('string'),
+                $this->logicalAnd(
+                    $this->stringContains('"to":'),
+                    $this->stringContains('"text":'),
+                    $this->stringContains('"send":')
+                ),
+                $this->getExpectAuthorization()
+            )
+            ->willReturn($httpResponse);
+
+        $smsService = $this->getSmsService($restClient);
 
         $to = $this->getValidPhoneNumber();
 
         $response = $this->sendSms($smsService, $to, 'sms test');
         $this->assertNotNull($response);
         $this->assertNotFalse($response);
+        $this->assertEquals($id, $response);
     }
 
     public function testSendInvalidPhone()
@@ -53,7 +74,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             json_encode([['error' => 'message']])
         );
 
-        $restClient = $this->getRestClient($response);
+        $restClient = $this->getSimpleRestClient($response);
 
         $smsService = $this->getSmsService($restClient);
         $this->sendSms($smsService, $this->getValidPhoneNumber(), "this should fail");
@@ -66,7 +87,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $response->expects($this->once())->method('isOk')->willReturn(false);
         $response->expects($this->atLeastOnce())->method('getContent')->willReturn('error');
 
-        $restClient = $this->getRestClient($response);
+        $restClient = $this->getSimpleRestClient($response);
 
         $smsService = $this->getSmsService($restClient);
         $this->sendSms($smsService, $this->getValidPhoneNumber(), "this should fail");
@@ -77,29 +98,38 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $messages = [
             [
                 "id" => 123,
-                "de" => "5551999999999",
-                "para" => "666",
-                "mensagem" => "Message 1",
-                "dataHoraRecebimento" => "2016-07-07T15:57:35.000-03:00",
+                "from" => "51999999999",
+                "to" => "666",
+                "text" => "Message 1",
+                "date" => "2017-07-31T22:09:00.977-02:00",
             ],
             [
                 "id" => 321,
-                "de" => "5554999999999",
-                "para" => "666",
-                "mensagem" => "Message 2",
-                "dataHoraRecebimento" => "2016-11-23T14:23:02.000-03:00",
+                "from" => "5554999999999",
+                "to" => "666",
+                "text" => "Message 2",
+                "date" => "2016-11-23T14:23:02.000-03:00",
             ],
         ];
 
+        $tag = 'tag';
         $lastId = 123;
         $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
         $response->expects($this->once())->method('isOk')->willReturn(true);
         $response->expects($this->once())->method('getContent')->willReturn(json_encode($messages));
 
-        $restClient = $this->getRestClient();
-        $restClient->expects($this->once())->method('get')->willReturn($response);
+        $restClient = $this->getSimpleRestClient();
+        $restClient->expects($this->once())->method('get')
+            ->with(
+                $this->logicalAnd(
+                    $this->isType('string'),
+                    $this->stringContains("tag={$tag}"),
+                    $this->stringContains("firstId={$lastId}")
+                ),
+                $this->getExpectAuthorization()
+            )
+            ->willReturn($response);
 
-        $tag = 'tag';
 
         /** @var SmsService $smsService */
         $smsService = $this->getSmsService($restClient);
@@ -118,7 +148,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $response->expects($this->once())->method('isOk')->willReturn(true);
         $response->expects($this->atLeastOnce())->method('getContent')->willReturn('error');
 
-        $restClient = $this->getRestClient();
+        $restClient = $this->getSimpleRestClient();
         $restClient->expects($this->once())->method('get')->willReturn($response);
 
         $tag = 'tag';
@@ -135,26 +165,34 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
         $response->expects($this->once())->method('isOk')->willReturn(true);
         $response->expects($this->once())->method('getContent')->willReturn(
-            json_encode([['numero' => $transactionId]])
+            json_encode([
+                'to' => '51999999999',
+                'text' => 'example text',
+                'send' => true,
+                'id' => $transactionId,
+                'sendDate' => '2017-09-13T13:00:36.000-02:00',
+                'deliveryDate' => '2017-09-13T13:00:41.503-02:00',
+                'status' => 'DELIVERED',
+                'statusDetails' => 'Message delivered to handset',
+            ])
         );
 
         $restClient = $this->getRestClient();
-        $restClient->expects($this->once())->method('get')->willReturn($response);
+        $restClient->expects($this->once())->method('get')
+            ->with(
+                $this->logicalAnd(
+                    $this->stringContains((string)$transactionId)
+                ),
+                $this->getExpectAuthorization()
+            )
+            ->willReturn($response);
 
         /** @var SmsService $smsService */
         $smsService = $this->getSmsService($restClient);
 
-        $to = new PhoneNumber();
-        $to
-            ->setCountryCode('55')
-            ->setNationalNumber('55999999999');
-
         $status = $smsService->getStatus($transactionId);
         $this->assertNotNull($status);
-        $this->assertNotEmpty($status);
-
-        $first = reset($status);
-        $this->assertEquals($transactionId, $first->numero);
+        $this->assertEquals($transactionId, $status->id);
     }
 
     public function testStatusError()
@@ -179,7 +217,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $response->expects($this->once())->method('isOk')->willReturn(false);
         $response->expects($this->once())->method('getContent')->willReturn($errorResponse);
 
-        $restClient = $this->getRestClient();
+        $restClient = $this->getSimpleRestClient();
         $restClient->expects($this->once())->method('get')->willReturn($response);
 
         /** @var SmsService $smsService */
@@ -187,17 +225,15 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $smsService->getStatus($transactionId);
     }
 
-    private function getRestClient($response = null)
+    private function getSimpleRestClient($response = null)
     {
-        $restClient = $this->getMockBuilder('Circle\RestClientBundle\Services\RestClient')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $restClient = $this->getRestClient();
 
         if (!$response) {
             $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
             $response->expects($this->any())->method('isOk')->willReturn(true);
             $response->expects($this->any())->method('getContent')->willReturn(
-                json_encode(['protocolo' => 12345678])
+                json_encode(12345678)
             );
         }
 
@@ -214,13 +250,14 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
     {
         $logger = $this->getMock('Psr\Log\LoggerInterface');
         if ($restClient === null) {
-            $restClient = $this->getRestClient();
+            $restClient = $this->getSimpleRestClient();
         }
 
         $config = new SmsServiceConfiguration(
             'https://some.address/send',
             'https://some.address/receive',
-            'https://some.address/status',
+            'https://some.address/status/{id}',
+            'REALM',
             'SYSTEM',
             'SECRET_KEY',
             1234,
@@ -247,5 +284,35 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             ->setNationalNumber('55999999999');
 
         return $phoneNumber;
+    }
+
+    /**
+     * @return \PHPUnit_Framework_MockObject_MockObject|RestClient
+     */
+    private function getRestClient()
+    {
+        return $this->getMockBuilder('Circle\RestClientBundle\Services\RestClient')
+            ->disableOriginalConstructor()
+            ->getMock();
+    }
+
+    /**
+     * @return \PHPUnit_Framework_MockObject_MockObject|Response
+     */
+    private function getResponse()
+    {
+        return $this->getMock('Symfony\Component\HttpFoundation\Response');
+    }
+
+    private function getExpectAuthorization()
+    {
+        return $this->equalTo([
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/json",
+                "organizacao: REALM",
+                "matricula: SYSTEM",
+                "senha: SECRET_KEY",
+            ],
+        ]);
     }
 }

@@ -18,6 +18,12 @@ class Sms
     /** @var \DateTime */
     protected $createdAt;
 
+    /** @var \DateTime */
+    private $dontDeliverUntil;
+
+    /** @var \DateTime */
+    private $dontDeliverAfter;
+
     /**
      * @return PhoneNumber
      */
@@ -90,6 +96,44 @@ class Sms
     public function setCreatedAt($createdAt)
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getDontDeliverUntil()
+    {
+        return $this->dontDeliverUntil;
+    }
+
+    /**
+     * @param \DateTime $dontDeliverUntil
+     * @return Sms
+     */
+    public function setDontDeliverUntil($dontDeliverUntil)
+    {
+        $this->dontDeliverUntil = $dontDeliverUntil;
+
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getDontDeliverAfter()
+    {
+        return $this->dontDeliverAfter;
+    }
+
+    /**
+     * @param \DateTime $dontDeliverAfter
+     * @return Sms
+     */
+    public function setDontDeliverAfter($dontDeliverAfter)
+    {
+        $this->dontDeliverAfter = $dontDeliverAfter;
 
         return $this;
     }
