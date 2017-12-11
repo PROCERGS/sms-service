@@ -95,6 +95,10 @@ class SmsServiceConfiguration
         $from,
         $shouldSend
     ) {
+        if (strstr($statusUri, '{id}') === false) {
+            throw new \InvalidArgumentException("Invalid status URI. It's expected for it to have an '{id}' placeholder.");
+        }
+
         $this->sendUri = $sendUri;
         $this->receiveUri = $receiveUri;
         $this->statusUri = $statusUri;
