@@ -26,7 +26,11 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
 
-      - run: composer install -n --prefer-dist
+      - run:
+          name: Installing Dependencies
+          command: |
+            mkdir -p /tmp/artifacts/coverage
+            composer install -n --prefer-dist
 
       - save_cache:
           paths:
@@ -34,4 +38,9 @@ jobs:
           key: v1-dependencies-{{ checksum "composer.json" }}
 
       # run tests!
-      - run: vendor/bin/phpunit --coverage-html=$CIRCLE_ARTIFACTS/coverage
+      - run:
+          name: Running Unit Tests
+          command: vendor/bin/phpunit --coverage-html=/tmp/artifacts/coverage
+
+      - store_artifacts:
+          path: /tmp/artifacts
