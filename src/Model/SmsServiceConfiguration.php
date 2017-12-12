@@ -48,21 +48,6 @@ class SmsServiceConfiguration
     private $systemKey;
 
     /**
-     * Additional authentication information.
-     *
-     * @var int
-     */
-    private $serviceOrder;
-
-    /**
-     * String that'll be prepended to the message resulting in a message in the following format:
-     * FROM_STRING: MESSAGE
-     *
-     * @var string
-     */
-    private $from;
-
-    /**
      * This will define the "send" parameter of the request.
      *
      * When false, messages will be sent to the SMS Service but will not be actually sent as SMS.
@@ -80,8 +65,6 @@ class SmsServiceConfiguration
      * @param string $realm
      * @param string $systemId
      * @param string $systemKey
-     * @param int $serviceOrder
-     * @param string $from
      * @param $shouldSend
      */
     public function __construct(
@@ -91,8 +74,6 @@ class SmsServiceConfiguration
         $realm,
         $systemId,
         $systemKey,
-        $serviceOrder,
-        $from,
         $shouldSend
     ) {
         if (strstr($statusUri, '{id}') === false) {
@@ -105,8 +86,6 @@ class SmsServiceConfiguration
         $this->realm = $realm;
         $this->systemId = $systemId;
         $this->systemKey = $systemKey;
-        $this->serviceOrder = $serviceOrder;
-        $this->from = $from;
         $this->shouldSend = $shouldSend;
     }
 
@@ -156,22 +135,6 @@ class SmsServiceConfiguration
     public function getSystemKey()
     {
         return $this->systemKey;
-    }
-
-    /**
-     * @return int
-     */
-    public function getServiceOrder()
-    {
-        return $this->serviceOrder;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFrom()
-    {
-        return $this->from;
     }
 
     /**

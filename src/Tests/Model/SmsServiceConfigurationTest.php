@@ -25,8 +25,6 @@ class SmsServiceConfigurationTest extends \PHPUnit_Framework_TestCase
             $realm = 'REALM',
             $systemId = 'SYSTEM_ID',
             $systemKey = 'SYSTEM_KEY',
-            $serviceOrder = 666,
-            $from = 'FROM',
             $shouldSend = true
         );
 
@@ -36,8 +34,6 @@ class SmsServiceConfigurationTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($realm, $config->getRealm());
         $this->assertEquals($systemId, $config->getSystemId());
         $this->assertEquals($systemKey, $config->getSystemKey());
-        $this->assertEquals($serviceOrder, $config->getServiceOrder());
-        $this->assertEquals($from, $config->getFrom());
         $this->assertEquals($shouldSend, $config->shouldSend());
     }
 
@@ -51,8 +47,6 @@ class SmsServiceConfigurationTest extends \PHPUnit_Framework_TestCase
             $realm = 'REALM',
             $systemId = 'SYSTEM_ID',
             $systemKey = 'SYSTEM_KEY',
-            $serviceOrder = 666,
-            $from = 'FROM',
             $shouldSend = true
         );
     }

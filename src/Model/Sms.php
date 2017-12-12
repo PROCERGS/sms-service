@@ -9,9 +9,6 @@ class Sms
     /** @var PhoneNumber */
     protected $to;
 
-    /** @var PhoneNumber */
-    protected $from;
-
     /** @var string */
     protected $message;
 
@@ -39,25 +36,6 @@ class Sms
     public function setTo(PhoneNumber $to)
     {
         $this->to = $to;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFrom()
-    {
-        return $this->from;
-    }
-
-    /**
-     * @param string $from
-     * @return Sms
-     */
-    public function setFrom($from)
-    {
-        $this->from = $from;
 
         return $this;
     }

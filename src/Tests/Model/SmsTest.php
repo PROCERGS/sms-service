@@ -11,7 +11,6 @@ class SmsTest extends \PHPUnit_Framework_TestCase
     {
         /** @var PhoneNumber $phoneNumber */
         $phoneNumber = $this->getMock('libphonenumber\PhoneNumber');
-        $from = 'FROM';
         $message = 'SOME MESSAGE';
         $createdAt = new \DateTime();
         $deliveryStartDate = new \DateTime();
@@ -19,14 +18,12 @@ class SmsTest extends \PHPUnit_Framework_TestCase
 
         $sms = new Sms();
         $sms->setCreatedAt($createdAt);
-        $sms->setFrom($from);
         $sms->setMessage($message);
         $sms->setTo($phoneNumber);
         $sms->setDontDeliverUntil($deliveryStartDate);
         $sms->setDontDeliverAfter($deliveryEndDate);
 
         $this->assertSame($createdAt, $sms->getCreatedAt());
-        $this->assertEquals($from, $sms->getFrom());
         $this->assertEquals($message, $sms->getMessage());
         $this->assertEquals($phoneNumber, $sms->getTo());
         $this->assertSame($deliveryStartDate, $sms->getDontDeliverUntil());

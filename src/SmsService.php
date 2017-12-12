@@ -164,7 +164,6 @@ class SmsService implements LoggerAwareInterface
     {
         $sms = new Sms();
         $sms
-            ->setFrom($this->config->getFrom())
             ->setTo($to)
             ->setMessage($message);
 

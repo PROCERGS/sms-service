@@ -260,8 +260,6 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
             'REALM',
             'SYSTEM',
             'SECRET_KEY',
-            1234,
-            'SMS Service',
             false
         );
 
