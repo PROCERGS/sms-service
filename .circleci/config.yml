@@ -41,7 +41,7 @@ jobs:
       # run tests!
       - run:
           name: Running Unit Tests
-          command: vendor/bin/phpunit --log-junit /tmp/phpunit/junit.xml --coverage-html=/tmp/artifacts/coverage
+          command: vendor/bin/phpunit --log-junit /tmp/phpunit/junit.xml --coverage-clover=/tmp/phpunit/clover.xml --coverage-html=/tmp/artifacts/coverage
 
       - store_artifacts:
           path: /tmp/artifacts
