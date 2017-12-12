@@ -38,6 +38,6 @@ if ($hasMinimumCoverage) {
     printf('SUCCESS: Coverage is %s.'.PHP_EOL, $prettyTpc);
     exit(0);
 } else {
-    printf('ERROR: Coverage is %s'.PHP_EOL, $prettyTpc);
+    printf('ERROR: Coverage is %s. That is bellow the minimum %s%% required!'.PHP_EOL, $prettyTpc, $minCoverage);
     exit(1);
 }
