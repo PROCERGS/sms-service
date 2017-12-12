@@ -47,4 +47,4 @@ jobs:
           path: /tmp/artifacts
 
       - store_test_results:
-          path: /tmp/phpunit/junit.xml
+          path: /tmp/phpunit
