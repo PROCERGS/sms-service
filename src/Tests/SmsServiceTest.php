@@ -4,7 +4,11 @@ namespace PROCERGS\Sms\Tests;
 
 use Circle\RestClientBundle\Services\RestClient;
 use libphonenumber\PhoneNumber;
+use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
+use PROCERGS\Sms\Model\Time;
+use PROCERGS\Sms\Model\TimeConstraint;
+use PROCERGS\Sms\Model\TimeConstraintInterface;
 use PROCERGS\Sms\SmsService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,9 +19,7 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $id = 12345678;
         $httpResponse = $this->getResponse();
         $httpResponse->expects($this->any())->method('isOk')->willReturn(true);
-        $httpResponse->expects($this->any())->method('getContent')->willReturn(
-            json_encode($id)
-        );
+        $httpResponse->expects($this->any())->method('getContent')->willReturn(json_encode($id));
 
         $restClient = $this->getRestClient();
         $restClient->expects($this->once())->method('post')
@@ -37,6 +39,46 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $to = $this->getValidPhoneNumber();
 
         $response = $this->sendSms($smsService, $to, 'sms test');
+        $this->assertNotNull($response);
+        $this->assertNotFalse($response);
+        $this->assertEquals($id, $response);
+    }
+
+    public function testSendWithTimeConstraints()
+    {
+        $id = 12345678;
+        $httpResponse = $this->getResponse();
+        $httpResponse->expects($this->any())->method('isOk')->willReturn(true);
+        $httpResponse->expects($this->any())->method('getContent')->willReturn(json_encode($id));
+
+        $restClient = $this->getRestClient();
+        $restClient->expects($this->once())->method('post')
+            ->with(
+                $this->isType('string'),
+                $this->logicalAnd(
+                    $this->stringContains('"to":', false),
+                    $this->stringContains('"text":', false),
+                    $this->stringContains('"send":', false),
+                    $this->stringContains('"beginTime":', false),
+                    $this->stringContains('"endTime":', false)
+                ),
+                $this->getExpectAuthorization()
+            )
+            ->willReturn($httpResponse);
+
+        $smsService = $this->getSmsService($restClient);
+
+        /** @var TimeConstraintInterface $timeConstraint */
+        $timeConstraint = (new TimeConstraint())
+            ->setStartTime(new Time())
+            ->setEndTime(new Time());
+
+        $sms = (new Sms())
+            ->setDeliveryTimeConstraint($timeConstraint)
+            ->setTo($this->getValidPhoneNumber())
+            ->setMessage('sms test');
+
+        $response = $smsService->send($sms);
         $this->assertNotNull($response);
         $this->assertNotFalse($response);
         $this->assertEquals($id, $response);

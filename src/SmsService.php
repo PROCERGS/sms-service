@@ -20,6 +20,8 @@ use PROCERGS\Sms\Exception\InvalidPhoneNumberException;
 use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Exception\SmsServiceException;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
+use PROCERGS\Sms\Model\TimeConstraint;
+use PROCERGS\Sms\Model\TimeInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerTrait;
@@ -69,6 +71,16 @@ class SmsService implements LoggerAwareInterface
             'text' => $sms->getMessage(),
             'send' => $this->config->shouldSend(),
         ];
+
+        $timeConstraint = $sms->getDeliveryTimeConstraint();
+        if ($timeConstraint instanceof TimeConstraint) {
+            if ($timeConstraint->getStartTime() instanceof TimeInterface) {
+                $payload['beginTime'] = (string)$timeConstraint->getStartTime();
+            }
+            if ($timeConstraint->getEndTime() instanceof TimeInterface) {
+                $payload['endTime'] = (string)$timeConstraint->getEndTime();
+            }
+        }
 
         $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
         $response = $client->post($this->config->getSendUri(), json_encode($payload), $this->getHeaders());

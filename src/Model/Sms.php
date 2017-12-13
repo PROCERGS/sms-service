@@ -15,11 +15,8 @@ class Sms
     /** @var \DateTime */
     protected $createdAt;
 
-    /** @var \DateTime */
-    private $dontDeliverUntil;
-
-    /** @var \DateTime */
-    private $dontDeliverAfter;
+    /** @var TimeConstraintInterface */
+    private $deliveryTimeConstraint;
 
     /**
      * @return PhoneNumber
@@ -79,39 +76,20 @@ class Sms
     }
 
     /**
-     * @return \DateTime
+     * @return TimeConstraintInterface
      */
-    public function getDontDeliverUntil()
+    public function getDeliveryTimeConstraint()
     {
-        return $this->dontDeliverUntil;
+        return $this->deliveryTimeConstraint;
     }
 
     /**
-     * @param \DateTime $dontDeliverUntil
+     * @param TimeConstraintInterface $deliveryTimeConstraint
      * @return Sms
      */
-    public function setDontDeliverUntil($dontDeliverUntil)
+    public function setDeliveryTimeConstraint($deliveryTimeConstraint)
     {
-        $this->dontDeliverUntil = $dontDeliverUntil;
-
-        return $this;
-    }
-
-    /**
-     * @return \DateTime
-     */
-    public function getDontDeliverAfter()
-    {
-        return $this->dontDeliverAfter;
-    }
-
-    /**
-     * @param \DateTime $dontDeliverAfter
-     * @return Sms
-     */
-    public function setDontDeliverAfter($dontDeliverAfter)
-    {
-        $this->dontDeliverAfter = $dontDeliverAfter;
+        $this->deliveryTimeConstraint = $deliveryTimeConstraint;
 
         return $this;
     }
