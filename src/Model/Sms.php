@@ -89,6 +89,10 @@ class Sms
      */
     public function setDeliveryTimeConstraint($deliveryTimeConstraint)
     {
+        if (!$deliveryTimeConstraint->getStartTime() instanceof TimeInterface
+            || !$deliveryTimeConstraint->getEndTime() instanceof TimeInterface) {
+            throw new \InvalidArgumentException('Both constraint times must be set.');
+        }
         $this->deliveryTimeConstraint = $deliveryTimeConstraint;
 
         return $this;

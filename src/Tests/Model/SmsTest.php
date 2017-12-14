@@ -30,4 +30,30 @@ class SmsTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($deliveryStartDate, $sms->getDeliveryTimeConstraint()->getStartTime());
         $this->assertSame($deliveryEndDate, $sms->getDeliveryTimeConstraint()->getEndTime());
     }
+
+    public function testTimeConstraintMustHaveAStartTime()
+    {
+        $validConstraint = new TimeConstraint(new Time(01, 10), new Time(02, 20));
+        $invalidConstraint = new TimeConstraint(null, new Time(02, 20));
+
+        $sms = new Sms();
+        $sms->setDeliveryTimeConstraint($validConstraint);
+        $this->assertSame($validConstraint, $sms->getDeliveryTimeConstraint());
+
+        $this->setExpectedException('\InvalidArgumentException');
+        $sms->setDeliveryTimeConstraint($invalidConstraint);
+    }
+
+    public function testTimeConstraintMustHaveAnEndTime()
+    {
+        $validConstraint = new TimeConstraint(new Time(01, 10), new Time(02, 20));
+        $invalidConstraint = new TimeConstraint(new Time(01, 10), null);
+
+        $sms = new Sms();
+        $sms->setDeliveryTimeConstraint($validConstraint);
+        $this->assertSame($validConstraint, $sms->getDeliveryTimeConstraint());
+
+        $this->setExpectedException('\InvalidArgumentException');
+        $sms->setDeliveryTimeConstraint($invalidConstraint);
+    }
 }
