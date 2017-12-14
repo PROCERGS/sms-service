@@ -9,14 +9,14 @@ class Sms
     /** @var PhoneNumber */
     protected $to;
 
-    /** @var PhoneNumber */
-    protected $from;
-
     /** @var string */
     protected $message;
 
     /** @var \DateTime */
     protected $createdAt;
+
+    /** @var TimeConstraintInterface */
+    private $deliveryTimeConstraint;
 
     /**
      * @return PhoneNumber
@@ -33,25 +33,6 @@ class Sms
     public function setTo(PhoneNumber $to)
     {
         $this->to = $to;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFrom()
-    {
-        return $this->from;
-    }
-
-    /**
-     * @param string $from
-     * @return Sms
-     */
-    public function setFrom($from)
-    {
-        $this->from = $from;
 
         return $this;
     }
@@ -90,6 +71,29 @@ class Sms
     public function setCreatedAt($createdAt)
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    /**
+     * @return TimeConstraintInterface
+     */
+    public function getDeliveryTimeConstraint()
+    {
+        return $this->deliveryTimeConstraint;
+    }
+
+    /**
+     * @param TimeConstraintInterface $deliveryTimeConstraint
+     * @return Sms
+     */
+    public function setDeliveryTimeConstraint($deliveryTimeConstraint)
+    {
+        if (!$deliveryTimeConstraint->getStartTime() instanceof TimeInterface
+            || !$deliveryTimeConstraint->getEndTime() instanceof TimeInterface) {
+            throw new \InvalidArgumentException('Both constraint times must be set.');
+        }
+        $this->deliveryTimeConstraint = $deliveryTimeConstraint;
 
         return $this;
     }
