@@ -49,23 +49,21 @@ require_once 'vendor/autoload.php';
 
 use libphonenumber\PhoneNumber;
 use PROCERGS\Sms\SmsService;
+use PROCERGS\Sms\Model\SmsServiceConfiguration;
 
 $client = /* initialize or get HTTP client from Symfony */;
 
-$options = [
-    'send_url' => "https://some.address/send",
-    'receive_url' => 'https://some.address/receive',
-    'status_url' => 'https://some.address/status',
-    'system_id' => 'SystemID',
-    'from_string' => 'SystemID',
-    'service_order' => 999999,
-    'authentication' => [
-        'system_id' => 'SystemID',
-        'system_key' => 'your_secret_key',
-    ],
-];
+$config = new SmsServiceConfiguration(
+    'https://some.address/send',
+    'https://some.address/receive',
+    'https://some.address/status/{id}',
+    'auth realm',
+    'SystemID',
+    'your_secret_key',
+    true
+);
 
-$service = new SmsService($client, $options);
+$service = new SmsService($client, $config);
 
 $to = new PhoneNumber();
 $to->setCountryCode('55')
@@ -74,7 +72,7 @@ $to->setCountryCode('55')
 try {
     $response = $service->easySend($to, "hello world!");
     var_dump($response);
-} catch (Exception $e) {
+} catch (\Exception $e) {
     var_dump($e->getMessage());
 }
 ```
