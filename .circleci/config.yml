@@ -47,7 +47,7 @@ jobs:
 
       - run:
           name: Check 100% Test Coverage
-          command: vendor/bin/check-coverage clover.xml /tmp/phpunit/clover.xml 100
+          command: vendor/bin/check-coverage /tmp/artifacts/coverage/clover.xml 100
 
       - store_artifacts:
           path: /tmp/artifacts
