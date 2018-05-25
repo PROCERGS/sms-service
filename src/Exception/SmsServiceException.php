@@ -14,8 +14,13 @@ class SmsServiceException extends \Exception
         $this->errorResponse = $errorResponse;
         if (is_array($errorResponse) && count($errorResponse) === 1) {
             $error = reset($errorResponse);
-            $message = property_exists($error, 'message') ? $error->message : 'Unknown error';
-            $details = property_exists($error, 'detail') ? $error->detail : 'No details informed';
+            if (is_array($error)) {
+                $message = array_key_exists('message', $error) ? $error['message'] : 'Unknown error';
+                $details = array_key_exists('detail', $error) ? $error['detail'] : 'No details informed';
+            } else {
+                $message = property_exists($error, 'message') ? $error->message : 'Unknown error';
+                $details = property_exists($error, 'detail') ? $error->detail : 'No details informed';
+            }
             $this->message = sprintf("%s: %s", $message, $details);
         } else {
             $this->message = $errorResponse;

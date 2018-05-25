@@ -3,7 +3,7 @@
 namespace PROCERGS\Sms\Exception;
 
 
-class InvalidCountryException extends \RuntimeException
+class InvalidCountryException extends \RuntimeException implements SmsExceptionInterface
 {
     //
 }
