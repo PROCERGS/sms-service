@@ -251,6 +251,10 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $this->assertNotNull($status->getStatus());
     }
 
+    /**
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     * @throws \PROCERGS\Sms\Exception\TransactionNotFoundException
+     */
     public function testStatusError()
     {
         $errorResponse = json_encode(
@@ -272,6 +276,28 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
         $response->expects($this->once())->method('isOk')->willReturn(false);
         $response->expects($this->once())->method('getContent')->willReturn($errorResponse);
+
+        $restClient = $this->getSimpleRestClient();
+        $restClient->expects($this->once())->method('get')->willReturn($response);
+
+        /** @var SmsService $smsService */
+        $smsService = $this->getSmsService($restClient);
+        $smsService->getStatus($transactionId);
+    }
+
+    /**
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     * @throws \PROCERGS\Sms\Exception\TransactionNotFoundException
+     */
+    public function testStatusNotFound()
+    {
+        $this->setExpectedException('PROCERGS\Sms\Exception\TransactionNotFoundException');
+
+        $transactionId = 'error';
+
+        $response = $this->getMock('Symfony\Component\HttpFoundation\Response');
+        $response->expects($this->once())->method('isOk')->willReturn(false);
+        $response->expects($this->once())->method('isNotFound')->willReturn(true);
 
         $restClient = $this->getSimpleRestClient();
         $restClient->expects($this->once())->method('get')->willReturn($response);
