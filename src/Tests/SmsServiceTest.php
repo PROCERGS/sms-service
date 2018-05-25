@@ -4,16 +4,19 @@ namespace PROCERGS\Sms\Tests;
 
 use Circle\RestClientBundle\Services\RestClient;
 use libphonenumber\PhoneNumber;
-use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
 use PROCERGS\Sms\Model\Time;
 use PROCERGS\Sms\Model\TimeConstraint;
 use PROCERGS\Sms\Model\TimeConstraintInterface;
+use PROCERGS\Sms\Protocols\V2\SmsBuilder;
 use PROCERGS\Sms\SmsService;
 use Symfony\Component\HttpFoundation\Response;
 
 class SmsServiceTest extends \PHPUnit_Framework_TestCase
 {
+    /**
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     */
     public function testSend()
     {
         $id = 12345678;
@@ -44,6 +47,9 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($id, $response);
     }
 
+    /**
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     */
     public function testSendWithTimeConstraints()
     {
         $id = 12345678;
@@ -70,13 +76,14 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
 
         /** @var TimeConstraintInterface $timeConstraint */
         $timeConstraint = (new TimeConstraint())
-            ->setStartTime(new Time())
-            ->setEndTime(new Time());
+            ->setStartTime(new Time(9, 0))
+            ->setEndTime(new Time(10, 0));
 
-        $sms = (new Sms())
+        $builder = (new SmsBuilder($this->getValidPhoneNumber(), 'sms test'))
             ->setDeliveryTimeConstraint($timeConstraint)
-            ->setTo($this->getValidPhoneNumber())
-            ->setMessage('sms test');
+            ->setShouldSend(true);
+
+        $sms = new \PROCERGS\Sms\Protocols\V2\Sms($builder);
 
         $response = $smsService->send($sms);
         $this->assertNotNull($response);
@@ -84,12 +91,16 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($id, $response);
     }
 
+    /**
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     */
     public function testSendInvalidPhone()
     {
         $smsService = $this->getSmsService();
 
-        $to = $this->getMock('libphonenumber\PhoneNumber');
-        $to->expects($this->once())->method('getCountryCode')->willReturn('1');
+        $to = (new PhoneNumber())
+            ->setCountryCode(1)
+            ->setNationalNumber('4155552671');
         $this->setExpectedException('PROCERGS\Sms\Exception\InvalidCountryException');
 
         $this->sendSms($smsService, $to, "this should fail");
@@ -232,9 +243,12 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         /** @var SmsService $smsService */
         $smsService = $this->getSmsService($restClient);
 
+        /** @var \PROCERGS\Sms\Protocols\V2\Sms $status */
         $status = $smsService->getStatus($transactionId);
         $this->assertNotNull($status);
-        $this->assertEquals($transactionId, $status->id);
+        $this->assertInstanceOf('PROCERGS\Sms\Protocols\V2\Sms', $status);
+        $this->assertEquals($transactionId, $status->getId());
+        $this->assertNotNull($status->getStatus());
     }
 
     public function testStatusError()
@@ -311,6 +325,13 @@ class SmsServiceTest extends \PHPUnit_Framework_TestCase
         return $service;
     }
 
+    /**
+     * @param SmsService $smsService
+     * @param PhoneNumber $to
+     * @param $message
+     * @return string
+     * @throws \PROCERGS\Sms\Exception\SmsServiceException
+     */
     private function sendSms(SmsService $smsService, PhoneNumber $to, $message)
     {
         return $smsService->easySend($to, $message);

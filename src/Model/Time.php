@@ -10,13 +10,27 @@
 
 namespace PROCERGS\Sms\Model;
 
-class Time implements TimeInterface
+use PROCERGS\Sms\Exception\InvalidTimeException;
+
+final class Time implements TimeInterface
 {
     /** @var int */
     private $hour;
 
     /** @var int */
     private $minute;
+
+    public static function createFromString($timeString)
+    {
+        if (is_null($timeString) || $timeString === '') {
+            return null;
+        }
+        if (preg_match(self::TIME_REGEX, $timeString, $m) !== 1) {
+            throw new InvalidTimeException("'{$timeString}' does not seem to be a valid time format.");
+        }
+
+        return new self($m[1], $m[2]);
+    }
 
     public function __construct($hour = null, $minute = null)
     {
@@ -43,7 +57,7 @@ class Time implements TimeInterface
     public function setHour($hour)
     {
         if ($hour < 0 || $hour >= 24) {
-            throw new \InvalidArgumentException("{$hour} is not a valid value");
+            throw new InvalidTimeException("{$hour} is not a valid hour");
         }
         $this->hour = $hour;
 
@@ -65,7 +79,7 @@ class Time implements TimeInterface
     public function setMinute($minute)
     {
         if ($minute < 0 || $minute >= 60) {
-            throw new \InvalidArgumentException("{$minute} is not a valid value");
+            throw new InvalidTimeException("{$minute} is not a valid minute");
         }
         $this->minute = $minute;
 
@@ -81,6 +95,9 @@ class Time implements TimeInterface
             return '';
         }
 
-        return sprintf('%s:%s', str_pad($this->getHour(), 2, '0'), str_pad($this->getMinute(), 2, '0'));
+        return sprintf('%s:%s',
+            str_pad($this->getHour(), 2, '0', STR_PAD_LEFT),
+            str_pad($this->getMinute(), 2, '0', STR_PAD_LEFT)
+        );
     }
 }

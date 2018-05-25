@@ -93,4 +93,12 @@ class TimeConstraintTest extends \PHPUnit_Framework_TestCase
     {
         TimeConstraint::validateTimes(new Time(1, 0), new Time(1, 1));
     }
+
+    public function testHasConstraint()
+    {
+        $constraint = new TimeConstraint();
+        $this->assertFalse($constraint->hasConstraint());
+        $constraint->setStartTime(Time::createFromString('10:00'));
+        $this->assertTrue($constraint->hasConstraint());
+    }
 }

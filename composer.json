@@ -19,6 +19,15 @@
             "email": "guilhermednt@users.noreply.github.com"
         }
     ],
+    "scripts": {
+        "test": "vendor/bin/phpunit -c . --colors=always"
+    },
+    "config": {
+        "bin-dir": "bin",
+        "platform": {
+            "php": "5.4.16"
+        }
+    },
     "autoload": {
         "psr-4": {
             "PROCERGS\\Sms\\": "src"

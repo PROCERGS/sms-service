@@ -40,4 +40,9 @@ interface TimeConstraintInterface
      * @return void
      */
     public static function validateTimes(TimeInterface $start = null, TimeInterface $end = null);
+
+    /**
+     * @return bool
+     */
+    public function hasConstraint();
 }

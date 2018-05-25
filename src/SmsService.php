@@ -10,18 +10,18 @@
 
 namespace PROCERGS\Sms;
 
-use Circle\RestClientBundle\Exceptions\CurlException;
 use Circle\RestClientBundle\Services\RestClient;
 use libphonenumber\PhoneNumber;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
 use PROCERGS\Sms\Exception\InvalidCountryException;
 use PROCERGS\Sms\Exception\InvalidPhoneNumberException;
-use PROCERGS\Sms\Model\Sms;
 use PROCERGS\Sms\Exception\SmsServiceException;
+use PROCERGS\Sms\Exception\TransactionNotFoundException;
 use PROCERGS\Sms\Model\SmsServiceConfiguration;
-use PROCERGS\Sms\Model\TimeConstraint;
-use PROCERGS\Sms\Model\TimeInterface;
+use PROCERGS\Sms\Protocols\SmsInterface;
+use PROCERGS\Sms\Protocols\V2\InputSms;
+use PROCERGS\Sms\Protocols\V2\OutputSms;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerTrait;
@@ -51,46 +51,28 @@ class SmsService implements LoggerAwareInterface
 
     /**
      * Sends an SMS and returns the id for later checking.
-     * @param Sms $sms
+     * @param SmsInterface $sms
      * @return string transaction id for later checking
      * @throws ServiceUnavailableHttpException
      * @throws SmsServiceException
      */
-    public function send(Sms $sms)
+    public function send(SmsInterface $sms)
     {
+        $this->validateCountry($sms->getTo());
+        $e164 = $this->getE164($sms->getTo());
         $client = $this->restClient;
 
-        if ($sms->getTo()->getCountryCode() != 55) {
-            throw new InvalidCountryException("SMS Service can only send messages to Brazil");
-        } else {
-            $to = $this->parseBrazilianPhone($sms->getTo());
-        }
+        $payload = (new InputSms($sms))->getPayload();
 
-        $payload = [
-            'to' => $sms->getTo()->getNationalNumber(),
-            'text' => $sms->getMessage(),
-            'send' => $this->config->shouldSend(),
-        ];
-
-        $timeConstraint = $sms->getDeliveryTimeConstraint();
-        if ($timeConstraint instanceof TimeConstraint) {
-            if ($timeConstraint->getStartTime() instanceof TimeInterface) {
-                $payload['beginTime'] = (string)$timeConstraint->getStartTime();
-            }
-            if ($timeConstraint->getEndTime() instanceof TimeInterface) {
-                $payload['endTime'] = (string)$timeConstraint->getEndTime();
-            }
-        }
-
-        $this->info("Sending SMS to {$to['e164']}: {$sms->getMessage()}");
+        $this->info("Sending SMS to {$e164}: {$sms->getMessage()}");
         $response = $client->post($this->config->getSendUri(), json_encode($payload), $this->getHeaders());
         $json = json_decode($response->getContent());
         if ($response->isOk() && is_numeric($json)) {
-            $this->info("SMS sent to {$to['e164']}: {$sms->getMessage()}");
+            $this->info("SMS sent to {$e164}: {$sms->getMessage()}");
 
             return $json;
         } else {
-            $this->error("Error sending SMS to {$to['e164']}");
+            $this->error("Error sending SMS to {$e164}");
 
             return $this->handleException($response, $json);
         }
@@ -149,8 +131,9 @@ class SmsService implements LoggerAwareInterface
     /**
      * Checks the status of sent messages
      * @param int $transactionId
-     * @return array|object
+     * @return SmsInterface
      * @throws SmsServiceException
+     * @throws TransactionNotFoundException
      */
     public function getStatus($transactionId)
     {
@@ -158,9 +141,11 @@ class SmsService implements LoggerAwareInterface
 
         $client = $this->restClient;
         $response = $client->get($url, $this->getHeaders());
-        $json = json_decode($response->getContent());
+        $json = json_decode($response->getContent(), true);
         if ($response->isOk() && $json !== null) {
-            return $json;
+            return (new OutputSms())->receive($json);
+        } elseif ($response->isNotFound()) {
+            throw new TransactionNotFoundException("Could not find transaction with ID {$transactionId}");
         } else {
             return $this->handleException($response, $json);
         }
@@ -174,29 +159,21 @@ class SmsService implements LoggerAwareInterface
      */
     public function easySend(PhoneNumber $to, $message)
     {
-        $sms = new Sms();
-        $sms
-            ->setTo($to)
-            ->setMessage($message);
-
-        return $this->send($sms);
+        return $this->send(\PROCERGS\Sms\Protocols\V2\Sms::createSimpleSms($to, $message));
     }
 
-    private function parseBrazilianPhone(PhoneNumber $phoneNumber)
+    private function getE164(PhoneNumber $phoneNumber)
     {
         $phoneUtil = PhoneNumberUtil::getInstance();
-        $e164 = $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
 
-        $m = null;
-        if (preg_match('/^[+]55(\d{2})(\d+)$/', $e164, $m) <= 0) {
-            throw new InvalidPhoneNumberException("The provided phone number does not seem to be Brazilian.");
+        return $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
+    }
+
+    private function validateCountry(PhoneNumber $phoneNumber)
+    {
+        if ($phoneNumber->getCountryCode() !== 55) {
+            throw new InvalidCountryException("The provided phone number does not seem to be Brazilian.");
         }
-
-        return [
-            'area_code' => $m[1],
-            'subscriber_number' => $m[2],
-            'e164' => $e164,
-        ];
     }
 
     /**

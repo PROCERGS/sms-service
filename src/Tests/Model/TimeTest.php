@@ -2,6 +2,7 @@
 
 namespace PROCERGS\Sms\Tests\Model;
 
+use PROCERGS\Sms\Exception\InvalidTimeException;
 use PROCERGS\Sms\Model\Time;
 
 class TimeTest extends \PHPUnit_Framework_TestCase
@@ -30,8 +31,8 @@ class TimeTest extends \PHPUnit_Framework_TestCase
         foreach ($invalidHours as $hour) {
             try {
                 $time->setHour($hour);
-                $this->fail("\InvalidArgumentException not thrown for invalid hour: {$hour}");
-            } catch (\InvalidArgumentException $e) {
+                $this->fail("InvalidTimeException not thrown for invalid hour: {$hour}");
+            } catch (InvalidTimeException $e) {
                 continue;
             }
         }
@@ -56,8 +57,8 @@ class TimeTest extends \PHPUnit_Framework_TestCase
         foreach ($invalidMinutes as $minute) {
             try {
                 $time->setMinute($minute);
-                $this->fail("\InvalidArgumentException not thrown for invalid minute: {$minute}");
-            } catch (\InvalidArgumentException $e) {
+                $this->fail("InvalidTimeException not thrown for invalid minute: {$minute}");
+            } catch (InvalidTimeException $e) {
                 continue;
             }
         }
@@ -83,7 +84,7 @@ class TimeTest extends \PHPUnit_Framework_TestCase
 
     public function testConstructorValidation()
     {
-        $this->setExpectedException('\InvalidArgumentException');
+        $this->setExpectedException('PROCERGS\Sms\Exception\InvalidTimeException');
 
         new Time(25, 100);
     }
@@ -93,5 +94,19 @@ class TimeTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('string', (string)(new Time()));
         $this->assertEquals('', (string)(new Time()));
         $this->assertEquals('10:11', (string)(new Time(10, 11)));
+    }
+
+    public function testCreateFromValidString()
+    {
+        $time = Time::createFromString('09:05');
+        $this->assertInstanceOf('PROCERGS\Sms\Model\Time', $time);
+        $this->assertEquals(9, $time->getHour());
+        $this->assertEquals(5, $time->getMinute());
+    }
+
+    public function testCreateFromInvalidString()
+    {
+        $this->setExpectedException('PROCERGS\Sms\Exception\InvalidTimeException');
+        Time::createFromString('9:5');
     }
 }

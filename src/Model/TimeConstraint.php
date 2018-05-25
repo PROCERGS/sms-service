@@ -63,4 +63,12 @@ class TimeConstraint implements TimeConstraintInterface
             throw new \InvalidArgumentException('Start time MUST be before end time.');
         }
     }
+
+    /**
+     * @return bool
+     */
+    public function hasConstraint()
+    {
+        return $this->getStartTime() instanceof TimeInterface || $this->getEndTime() instanceof TimeInterface;
+    }
 }
